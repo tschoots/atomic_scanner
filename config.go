@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -194,63 +193,12 @@ func decrypt(key []byte, cryptoText string) string {
 
 func (c *config) validUseridPassword() bool {
 
-	fmt.Println(c.Url)
-	u, err := url.ParseRequestURI(c.Url)
-	if err != nil {
-		fmt.Printf("ERROR : url.ParseRequestURI\n%s\n", err)
-		return false
-	}
-	resource := "/j_spring_security_check"
-	u.Path = resource
-	data := url.Values{}
-	data.Add("j_username", c.User)
-	data.Add("j_password", c.Password)
-
-	client := &http.Client{}
-
-	jar := &myjar{}
-	jar.jar = make(map[string][]*http.Cookie)
-	client.Jar = jar
-
-	urlStr := fmt.Sprintf("%v", u)
-	req, err := http.NewRequest("POST", urlStr, bytes.NewBufferString(data.Encode()))
-	if err != nil {
-		fmt.Printf("ERROR NewRequest:\n%s\n", err)
-		return false
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded") // needed this the prevend 401 Unauthorized
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("ERROR client.do\n%s\n", err)
-		return false
-	}
-	resp.Body.Close()
-	if resp.StatusCode != 204 {
-		fmt.Printf("ERROR : resp status : %s\n%d\n", resp.Status, resp.StatusCode)
-		return false
-	}
-	return true
+	hubServer := HubServer{Config: c}
+	
+	return hubServer.login()
 }
 
-type myjar struct {
-	jar map[string][]*http.Cookie
-}
 
-func (p *myjar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	//	fmt.Printf("in SetCookies The URL is : %s\n", u.String())
-	//	fmt.Printf("u.Host : %s\n", u.Host)
-	//	fmt.Printf("The cookie being set is : %s\n", cookies)
-	p.jar[u.Host] = cookies
-}
-
-func (p *myjar) Cookies(u *url.URL) []*http.Cookie {
-	//	fmt.Printf("in cookies The URL is : %s\n", u.String())
-	//	fmt.Printf("u.Host : %s\n", u.Host)
-	//	fmt.Printf("Cookie being returned is : %s\n", p.jar[u.Host])
-	return p.jar[u.Host]
-}
 
 func downloadFromUrl(url string) {
 	tokens := strings.Split(url, "/")

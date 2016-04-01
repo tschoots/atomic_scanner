@@ -1,34 +1,27 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/base64"
 	"fmt"
-	"strings"
-	"encoding/json"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"log"
 	"path/filepath"
 	"regexp"
-	"flag"
+	"time"
 
 )
 
+
+
 //func ScanImage(path string,jar string, jarpath string, image string, conf config) {
-func ScanImage(conf config) {
-	//iscanPath := "/home/blackduck/j_scanner/bin/scan.cli.sh"
-	//hostname, _ := os.Hostname()
-	img_arr := strings.Split(image, ":")
-	img_name := img_arr[0]
-	tag := img_arr[1]
-	project := fmt.Sprintf("{%s}%s", conf.ScanHost, img_name)
+func ScanImage(scanDir string, conf *config) {
+	hostname, _ := os.Hostname()
+	tag := time.Now().Format(time.RFC850)
+	project := fmt.Sprintf("{%s}%s", hostname, "atomic_scan" )
 	
 	jar, jarPath := getJarFiles(conf.ScannerDir)
 	
-	onejarpath := fmt.Sprintf("-Done-jar.jar.path=%s", jarpath)
+	onejarpath := fmt.Sprintf("-Done-jar.jar.path=%s", jarPath)
 
 	cmd := exec.Command("java",
 		"-Xms256m",
@@ -44,7 +37,7 @@ func ScanImage(conf config) {
 		"--username", conf.User,
 		"--password", conf.Password,
 		"-v",
-		path)
+		scanDir)
 	//log.Println(cmd.Args)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
