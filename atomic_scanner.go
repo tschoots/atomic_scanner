@@ -79,6 +79,7 @@ func main() {
 	p = strings.Replace(p, "\\", "/", -1)
 	h, _ := os.Hostname()
 	searchString := fmt.Sprintf("%s/%s", h, p)
+	searchString = strings.Replace(searchString, "//", "/", -1)
 	hub := HubServer{Config: config}
 	if ok := hub.login(); !ok {
 		fmt.Printf("ERROR login into the hub.\n")
@@ -87,6 +88,10 @@ func main() {
 	
 	// check if the scan was completed
 	codelocations := hub.findCodeLocations(searchString)
+	if len(codelocations.Items) != 1 {
+		fmt.Printf("ERROR no code locations for search string : \n%s\n\n", searchString)
+		os.Exit(1)
+	}
 	for strings.Compare(codelocations.Items[0].Status, "COMPLETE") != 0 {
 		time.Sleep( 1 * time.Minute )
 		codelocations = hub.findCodeLocations(searchString)
