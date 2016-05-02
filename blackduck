@@ -1,0 +1,11 @@
+type: scanner
+scanner_name: blackduck
+image_name: blackducksoftware/atomic
+default_scan: vuln
+custom_args: ['-ti', '--rm', '-h', '$(hostname)', '--volumes-from', 'blackduck_conf']
+scans: [
+      { name: vuln,
+        args: ['/atomic_scanner'],
+        description: "list the vulnerabilities"
+      }
+]  

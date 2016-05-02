@@ -44,9 +44,13 @@ ENV PATH ${PATH}:${JAVA_HOME}/bin
 ENV LANG C.UTF-8
 
 
+LABEL INSTALL='docker run -ti -v /scanner -v /conf -v /log --name blackduck_conf -v /etc/atomic.d/:/host/etc/atomic.d/ $IMAGE sh /install.sh'  
+
 WORKDIR /
+COPY   blackduck /
 COPY   atomic_scanner /
+COPY   install.sh /
 
 
 
-ENTRYPOINT ["./atomic_scanner"]
+#ENTRYPOINT ["./atomic_scanner"]

@@ -7,9 +7,14 @@ import (
 
 
 type Report struct {
-	UUID     string   `json:"uuid"`
+	ScanType  string  `json:"Scan Type"`
+	Scanner   string  `json:"Scanner"`
+	FinishedTime string `json:"Finished Time"`
+	UUID     string   `json:"UUID"`
 	ScannerName string  `json:"scanname"`
-	Time     string  `json:"time"`
+	Time     string  `json:"Time"`
+	Successful  bool `json:"Successful"`
+	CVEFeedLastUpdated  string `json:"CVE Feed Last Updated"`
 	ReportUrl string `json:"reporturl"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities"`
 }
