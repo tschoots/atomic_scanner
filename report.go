@@ -13,7 +13,7 @@ type Report struct {
 	UUID     string   `json:"UUID"`
 	ScannerName string  `json:"scanname"`
 	Time     string  `json:"Time"`
-	Successful  bool `json:"Successful"`
+	Successful  string `json:"Successful"`
 	CVEFeedLastUpdated  string `json:"CVE Feed Last Updated"`
 	ReportUrl string `json:"reporturl"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities"`

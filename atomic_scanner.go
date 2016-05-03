@@ -141,7 +141,7 @@ func main() {
 			ScanType:           "vuln",
 			FinishedTime:       timeStamp,
 			CVEFeedLastUpdated: timeStamp,
-			Successful:         true,
+			Successful:         "true",
 			Time:               timeStamp,
 			Vulnerabilities:    totalVulnerabilitiesList,
 			ReportUrl:          reportUrl}
