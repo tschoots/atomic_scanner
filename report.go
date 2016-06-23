@@ -17,5 +17,8 @@ type Report struct {
 	CVEFeedLastUpdated  string `json:"CVE Feed Last Updated"`
 	ReportUrl string `json:"reporturl"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities"`
+	Custom   struct {
+		ReportURL   string `json:"Report URL"`
+	} `json:"Custom"`
 }
 

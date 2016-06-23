@@ -144,6 +144,11 @@ func main() {
 			Successful:         "true",
 			Time:               timeStamp,
 			Vulnerabilities:    totalVulnerabilitiesList,
+			Custom:             struct {
+				ReportURL   string `json:"Report URL"`
+			}{
+				ReportURL:  reportUrl, 
+			},
 			ReportUrl:          reportUrl}
 
 		jsonReport, err := json.Marshal(report)
