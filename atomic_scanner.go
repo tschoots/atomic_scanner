@@ -124,11 +124,13 @@ func main() {
 
 		// now get the components with vulnerabilities
 		vulnBom := hub.getVulnerabilityBom(codelocations.Items[0].Version.Id, 5000)
+		
+		fmt.Printf("DEBUG : nr of vulnBOm entries : %d\n", len(vulnBom.Items))
 
 		// get the vulnerabilities per component
 		var totalVulnerabilitiesList []vulnerability
 		for _, v := range vulnBom.Items {
-			vulnList := hub.getVulnerabilities(codelocations.Items[0].Version.Id, v.ChannelRelease.Id, v.Project.Id, 5000)
+			vulnList := hub.getVulnerabilities(codelocations.Items[0].Version.Id, v.Release.Id, v.ChannelRelease.Id, 5000)
 			totalVulnerabilitiesList = append(totalVulnerabilitiesList, vulnList.Items...)
 		}
 

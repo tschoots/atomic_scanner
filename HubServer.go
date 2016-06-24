@@ -62,6 +62,11 @@ type vulnerabilityBomHub32 struct {
 		Project struct {
 			Id string `json:"id"`
 		} `json:"project"`
+		Release struct{
+			Id                       string  `json:"id"`
+			Version                  string  `json:"version"`
+			vulnerabilityCountsUrl   string  `json:"vulnerabilityCountsUrl"`
+		} `json:"release"`
 	} `json:"items"`
 }
 
@@ -329,9 +334,11 @@ func (h *HubServer) getVulnerabilityBom(versionId string, maxRows int) *vulnerab
 	return &vulns
 }
 
-func (h *HubServer) getVulnerabilities(versionId string, channelReleaseId string, producerReleaseId string, maxRows int) *vulnerabilities {
+func (h *HubServer) getVulnerabilities(versionId string, releaseId string, channelReleaseId string, maxRows int) *vulnerabilities {
 	//getStr := fmt.Sprintf("%s/api/v1/releases/%s/RL/%s/channels/%s/vulnerabilities?limit=%d&sortField=baseScore&offset=0", h.Config.Url, versionId, producerReleaseId, channelReleaseId, maxRows)
-	getStr := fmt.Sprintf("%s/api/v1/releases/%s/RL/%s/channels/%s/vulnerabilities?limit=%d&sortField=baseScore&offset=0", h.Config.Url, versionId, producerReleaseId, channelReleaseId, maxRows)
+	getStr := fmt.Sprintf("%s/api/v1/releases/%s/RL/%s/channels/%s/vulnerabilities?limit=%d&sortField=baseScore&offset=0", h.Config.Url, versionId, releaseId, channelReleaseId, maxRows)
+
+    fmt.Printf("DEBUG getVulnerabilities : %s\n", getStr)
 
 	var vulns vulnerabilities
 
