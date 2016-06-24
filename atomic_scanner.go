@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	APP_VERSION      = "0.1"
+	APP_VERSION      = "0.1_3.2"
 	scan_input_path  = "scanin"
 	scan_output_path = "scanout"
 )
@@ -75,7 +75,7 @@ func main() {
 
 	//ok all is fine start scan
 	for _, dir := range scanDirectories {
-		
+
 		inputPath := filepath.Join(scan_input_path, dir.Name())
 		outputPath := filepath.Join(scan_output_path, dir.Name())
 		os.MkdirAll(outputPath, 0775)
@@ -103,6 +103,10 @@ func main() {
 			time.Sleep(1 * time.Minute)
 			codelocations = hub.findCodeLocations(searchString)
 			fmt.Printf("Scan status : %s\n", codelocations.Items[0].Status)
+			if strings.Compare(codelocations.Items[0].Status, "ERROR") == 0 {
+				fmt.Printf("ERROR on the hub server on code location: %s", codelocations.Items[0].Url)
+				os.Exit(1)
+			}
 		}
 
 		// check if the BOM creation is completed
@@ -124,7 +128,7 @@ func main() {
 		// get the vulnerabilities per component
 		var totalVulnerabilitiesList []vulnerability
 		for _, v := range vulnBom.Items {
-			vulnList := hub.getVulnerabilities(codelocations.Items[0].Version.Id, v.ChannelRelease.Id, v.ProducerReleases[0].Id, 5000)
+			vulnList := hub.getVulnerabilities(codelocations.Items[0].Version.Id, v.ChannelRelease.Id, v.Project.Id, 5000)
 			totalVulnerabilitiesList = append(totalVulnerabilitiesList, vulnList.Items...)
 		}
 
@@ -144,12 +148,12 @@ func main() {
 			Successful:         "true",
 			Time:               timeStamp,
 			Vulnerabilities:    totalVulnerabilitiesList,
-			Custom:             struct {
-				ReportURL   string `json:"Report URL"`
+			Custom: struct {
+				ReportURL string `json:"Report URL"`
 			}{
-				ReportURL:  reportUrl, 
+				ReportURL: reportUrl,
 			},
-			ReportUrl:          reportUrl}
+			ReportUrl: reportUrl}
 
 		jsonReport, err := json.Marshal(report)
 		if err != nil {
