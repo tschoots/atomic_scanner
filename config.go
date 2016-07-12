@@ -68,7 +68,8 @@ func CreateConfig() (*config , bool) {
 	conf := config{ScannerDir: cli_path}
 	conf.init()
 	
-	jsonString , err := json.Marshal(conf)
+	//jsonString , err := json.Marshal(conf)
+	jsonString , err := json.MarshalIndent(conf, "", "   ")
 	if err != nil {
 		fmt.Errorf("Error marshall configuration: %s\n\n", err)
 		return nil, false

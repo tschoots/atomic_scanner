@@ -150,6 +150,7 @@ func main() {
 			Successful:         "true",
 			Time:               timeStamp,
 			Vulnerabilities:    totalVulnerabilitiesList,
+			Vulnerable:         (vulnBom.TotalCount > 0),          
 			Custom: struct {
 				ReportURL string `json:"Report URL"`
 			}{
@@ -157,7 +158,8 @@ func main() {
 			},
 			ReportUrl: reportUrl}
 
-		jsonReport, err := json.Marshal(report)
+		//jsonReport, err := json.Marshal(report)
+		jsonReport, err := json.MarshalIndent(report, "", "   ")
 		if err != nil {
 			fmt.Printf("ERROR marshall of report went wrong : \n%s\n", err)
 			os.Exit(1)

@@ -16,6 +16,7 @@ type Report struct {
 	Successful  string `json:"Successful"`
 	CVEFeedLastUpdated  string `json:"CVE Feed Last Updated"`
 	ReportUrl string `json:"reporturl"`
+	Vulnerable  bool  `json:"vulnerable"`
 	Vulnerabilities []vulnerability `json:"vulnerabilities"`
 	Custom   struct {
 		ReportURL   string `json:"Report URL"`
