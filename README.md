@@ -15,3 +15,13 @@ $docker run -ti -v /scanner -v /conf --name eng-hub blackducksoftware/atomic_sca
 
 $docker run -ti --rm -h $(hostname) --volumes-from eng-hub -v /etc/localtime:/etc/localtime -v $(pwd)/scanin:/scanin -v $(pwd)/scanout:/scanout ton
 
+
+# Release
+
+When a new atomic scanner has to be released the following steps should be taken
+
+
+1.  move to the top directory and run the following command
+`./docker_golang_build.sh` 
+2.  push the created image with the follwing command
+`docker push blackducksoftware/atomic` 
