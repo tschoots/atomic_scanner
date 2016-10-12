@@ -14,7 +14,7 @@ import (
 
 
 //func ScanImage(path string,jar string, jarpath string, image string, conf config) {
-func ScanImage(scanDir string, conf *config) {
+func ScanImage(scanDir string, conf *config, statusWriteDir string) {
 	hostname, _ := os.Hostname()
 	tag := time.Now().Format(time.RFC850)
 	project := fmt.Sprintf("{%s}%s", hostname, "atomic_scan" )
@@ -22,6 +22,9 @@ func ScanImage(scanDir string, conf *config) {
 	jar, jarPath := getJarFiles(conf.ScannerDir)
 	
 	onejarpath := fmt.Sprintf("-Done-jar.jar.path=%s", jarPath)
+	
+	// the new way of validating from 3.3.0 and above
+	os.Setenv("BD_HUB_PASSWORD", conf.Password)
 
 	cmd := exec.Command("java",
 		"-Xms256m",
@@ -35,8 +38,9 @@ func ScanImage(scanDir string, conf *config) {
 		"--project", project,
 		"--release", tag,
 		"--username", conf.User,
-		"--password", conf.Password,
-		"-v",
+		//"--password", conf.Password,
+		"--statusWriteDir", statusWriteDir,
+		//"-v",
 		scanDir)
 	//log.Println(cmd.Args)
 	cmd.Stdout = os.Stdout

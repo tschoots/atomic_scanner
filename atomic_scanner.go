@@ -1,14 +1,16 @@
 package main
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
+	//"strings"
+	//"time"
+	"sync"
 )
 
 const (
@@ -48,6 +50,8 @@ func main() {
 		CreateConfig()
 		os.Exit(1)
 	}
+	
+	
 
 	// check if the input path exists
 	if _, err := os.Stat(scan_input_path); os.IsNotExist(err) {
@@ -73,104 +77,52 @@ func main() {
 	// now find all input directories
 	scanDirectories, _ := ioutil.ReadDir(scan_input_path)
 
+	// add a inotify watcher to watch the "statusWriteDir"
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer watcher.Close()
+
+	var wg sync.WaitGroup
+
 	//ok all is fine start scan
+	// note every input scan dir is scanned parrellel
 	for _, dir := range scanDirectories {
 
 		inputPath := filepath.Join(scan_input_path, dir.Name())
 		outputPath := filepath.Join(scan_output_path, dir.Name())
-		os.MkdirAll(outputPath, 0775)
-		ScanImage(inputPath, config)
-
-		// now the scan is finished find the BOM report
-		p, _ := filepath.Abs(inputPath)
-		p = strings.Replace(p, "\\", "/", -1)
-		h, _ := os.Hostname()
-		searchString := fmt.Sprintf("%s/%s", h, p)
-		searchString = strings.Replace(searchString, "//", "/", -1)
-		hub := HubServer{Config: config}
-		if ok := hub.login(); !ok {
-			fmt.Printf("ERROR login into the hub.\n")
-			os.Exit(1)
-		}
-
-		// check if the scan was completed
-		codelocations := hub.findCodeLocations(searchString)
-		if len(codelocations.Items) != 1 {
-			fmt.Printf("ERROR no code locations for search string : \n%s\n\n", searchString)
-			os.Exit(1)
-		}
-		for strings.Compare(codelocations.Items[0].Status, "COMPLETE") != 0 {
-			time.Sleep(1 * time.Minute)
-			codelocations = hub.findCodeLocations(searchString)
-			fmt.Printf("Scan status : %s\n", codelocations.Items[0].Status)
-			if strings.Compare(codelocations.Items[0].Status, "ERROR") == 0 {
-				fmt.Printf("ERROR on the hub server on code location: %s", codelocations.Items[0].Url)
-				os.Exit(1)
-			}
-		}
-
-		// check if the BOM creation is completed
-		bomRows := hub.getBomRows(codelocations.Items[0].Version.Id, 1)
-		count := bomRows.TotalCount
-		for {
-			time.Sleep(1 * time.Minute)
-			bomRows = hub.getBomRows(codelocations.Items[0].Version.Id, 1)
-			if count == bomRows.TotalCount {
-				break
-			}
-			count = bomRows.TotalCount
-			fmt.Printf("Building BOM : %d rows\n", count)
-		}
-
-		// now get the components with vulnerabilities
-		vulnBom := hub.getVulnerabilityBom(codelocations.Items[0].Version.Id, 5000)
-		
-		fmt.Printf("DEBUG : nr of vulnBOm entries : %d\n", len(vulnBom.Items))
-
-		// get the vulnerabilities per component
-		var totalVulnerabilitiesList []vulnerability
-		for _, v := range vulnBom.Items {
-			vulnList := hub.getVulnerabilities(codelocations.Items[0].Version.Id, v.Release.Id, v.ChannelRelease.Id, 5000)
-			totalVulnerabilitiesList = append(totalVulnerabilitiesList, vulnList.Items...)
-		}
-
-		fmt.Printf("total nr of vulnerabilities : %d\n", len(totalVulnerabilitiesList))
-		//timeStamp := time.Now().Format(time.RFC3339)
-		t := time.Now()
-		timeStamp := fmt.Sprintf("%d-%02d-%02dT%02d_%02d_%02d-00_00",
-			t.Year(), t.Month(), t.Day(),
-			t.Hour(), t.Minute(), t.Second())
-		reportUrl := fmt.Sprintf("%s/#versions/id:%s/vier:bom", config.Url, codelocations.Items[0].Version.Id)
-		report := &Report{UUID: inputPath,
-			ScannerName:        "blackduck",
-			Scanner:            "blackduck",
-			ScanType:           "vuln",
-			FinishedTime:       timeStamp,
-			CVEFeedLastUpdated: timeStamp,
-			Successful:         "true",
-			Time:               timeStamp,
-			Vulnerabilities:    totalVulnerabilitiesList,
-			Vulnerable:         (vulnBom.TotalCount > 0),          
-			Custom: struct {
-				ReportURL string `json:"Report URL"`
-			}{
-				ReportURL: reportUrl,
-			},
-			ReportUrl: reportUrl}
-
-		//jsonReport, err := json.Marshal(report)
-		jsonReport, err := json.MarshalIndent(report, "", "   ")
+		statusDir := filepath.Join(outputPath, "status")
+		os.MkdirAll(statusDir, 0775)
+		// this is a bid magical somehow iscan creates a directory status to dump the status json
+		err = watcher.Add(statusDir)
 		if err != nil {
-			fmt.Printf("ERROR marshall of report went wrong : \n%s\n", err)
-			os.Exit(1)
+			//fmt.Fatal(err)
+			fmt.Println(err)
 		}
-
-		//fileName := fmt.Sprintf("%s.json", timeStamp)
-		fileName := "json"
-		if err := ioutil.WriteFile(filepath.Join(outputPath, fileName), jsonReport, 0755); err != nil {
-			fmt.Printf("ERROR writing file %s \n%s\n\n", fileName, err)
-			os.Exit(1)
-		}
+		wg.Add(1)
+		go ScanImage(inputPath, config, outputPath)
 	}
+
+	// ok all scans are running now so lets wait for the statusWrite json file
+	go func() {
+		for {
+			select {
+			case event := <-watcher.Events:
+
+				if event.Op&fsnotify.Create == fsnotify.Create {
+					fmt.Println("create : ", event.Name)
+					wg.Done()
+					// download report
+				}
+
+			case err := <-watcher.Errors:
+				fmt.Println("error:", err)
+			}
+		}
+	}()
+	fmt.Println("wait")
+	wg.Wait()
+	fmt.Println("the end")
 
 }
