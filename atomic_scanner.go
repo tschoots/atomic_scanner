@@ -27,6 +27,8 @@ type input struct {
 
 var in input
 
+
+
 func init() {
 	flag.StringVar(&in.apiUrl, "a", "REQUIRED", "api url for example https://saleshub.blackducksoftware.com")
 	flag.StringVar(&in.username, "u", "REQUIRED", "the username that can be used to access rest endpoints")
@@ -50,8 +52,6 @@ func main() {
 		CreateConfig()
 		os.Exit(1)
 	}
-	
-	
 
 	// check if the input path exists
 	if _, err := os.Stat(scan_input_path); os.IsNotExist(err) {
@@ -104,14 +104,26 @@ func main() {
 		go ScanImage(inputPath, config, outputPath)
 	}
 
+	hub := HubServer{Config: config}
+	if ok := hub.login(); !ok {
+		fmt.Printf("ERROR login into the hub.\n")
+		os.Exit(1)
+	}
+
 	// ok all scans are running now so lets wait for the statusWrite json file
 	go func() {
 		for {
 			select {
 			case event := <-watcher.Events:
 
-				if event.Op&fsnotify.Create == fsnotify.Create {
-					fmt.Println("create : ", event.Name)
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					fmt.Println("write : ", event.Name)
+					if !hub.WaitForBomCompletion(event.Name){
+						fmt.Printf("ERROR : code location failed %s\n", event.Name)
+					}else {
+						fmt.Printf("code location complete : %s\n" , event.Name)
+					}
+					
 					wg.Done()
 					// download report
 				}

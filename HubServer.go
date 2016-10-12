@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type myjar struct {
@@ -62,35 +64,35 @@ type vulnerabilityBomHub32 struct {
 		Project struct {
 			Id string `json:"id"`
 		} `json:"project"`
-		Release struct{
-			Id                       string  `json:"id"`
-			Version                  string  `json:"version"`
-			vulnerabilityCountsUrl   string  `json:"vulnerabilityCountsUrl"`
+		Release struct {
+			Id                     string `json:"id"`
+			Version                string `json:"version"`
+			vulnerabilityCountsUrl string `json:"vulnerabilityCountsUrl"`
 		} `json:"release"`
 	} `json:"items"`
 }
 
 type vulnerability struct {
-	Id                     string `json:"id"`
-	AccessComplexity       string `json:"accessComplexity"`
-	AccessVector           string `json:"accessVector"`
-	ActualAt               string `json:"actualAt"`
-	Authentication         string `json:"authentication"`
-	AutoCreated            bool `json:"autoCreated"`
-	AvailabilityImpact     string `json:"availabilityImpact"`
+	Id                     string  `json:"id"`
+	AccessComplexity       string  `json:"accessComplexity"`
+	AccessVector           string  `json:"accessVector"`
+	ActualAt               string  `json:"actualAt"`
+	Authentication         string  `json:"authentication"`
+	AutoCreated            bool    `json:"autoCreated"`
+	AvailabilityImpact     string  `json:"availabilityImpact"`
 	BaseScore              float64 `json:"baseScore"`
 	ExploitabilitySubscore float64 `json:"exploitabilitySubscore"`
 	ImpactSubscore         float64 `json:"impactSubscore"`
-	LastModified           string `json:"lastModified"`
-	PublishedDate          string `json:"publishedDate"`
-	Severity               string `json:"severity"`
+	LastModified           string  `json:"lastModified"`
+	PublishedDate          string  `json:"publishedDate"`
+	Severity               string  `json:"severity"`
 	//Solution               string `json:"solution"`
-	Source                 string `json:"source"`
-	Summary                string `json:"summary"`
+	Source  string `json:"source"`
+	Summary string `json:"summary"`
 	//TargetAt               string `json:"targetAt"`
 	//TechnicalDescription   string `json:"technicalDescription"`
 	//Title                  string `json:"title"`
-	Classifications        []struct {
+	Classifications []struct {
 		ClassificationId int    `json:"classificationId"`
 		Description      string `json:"description"`
 		Longname         string `json:"longname"`
@@ -103,17 +105,17 @@ type vulnerability struct {
 		Type    string `json:"type"`
 	} `json:"references"`
 	RelatedMetrics []struct {
-		AccessComplexity       string `json:"accessComplexity"`
-		AccessVector           string `json:"accessVector"`
-		Authentication         string `json:"authentication"`
-		AvailabilityImpact     string `json:"availabilityImpact"`
+		AccessComplexity       string  `json:"accessComplexity"`
+		AccessVector           string  `json:"accessVector"`
+		Authentication         string  `json:"authentication"`
+		AvailabilityImpact     string  `json:"availabilityImpact"`
 		BaseScore              float64 `json:"baseScore"`
-		ConfidentialityImpact  string `json:"confidentialityImpact"`
+		ConfidentialityImpact  string  `json:"confidentialityImpact"`
 		ExploitabilitySubscore float64 `json:"exploitabilitySubscore"`
-		generatedOn            string `json:"generatedOn"`
+		generatedOn            string  `json:"generatedOn"`
 		ImpactSubscore         float64 `json:"impactSubscore"`
-		IntegrityImpact        string `json:"integrityImpact"`
-		Source                 string `json:"source"`
+		IntegrityImpact        string  `json:"integrityImpact"`
+		Source                 string  `json:"source"`
 	} `json:"relatedMetrics"`
 	RelatedVulnerabilities []struct {
 		Id                  string `json:"relatedVulnerabilities"`
@@ -129,7 +131,7 @@ type vulnerabilities struct {
 
 type bomRiskProfile struct {
 	//NumberOfItems int `json:"numberOfItems"`
-	Categories    struct {
+	Categories struct {
 		ACTIVITY      ranking `json:"ACTIVITY"`
 		LICENSE       ranking `json:"LICENSE"`
 		OPERATIONAL   ranking `json:"OPERATIONAL"`
@@ -179,15 +181,14 @@ type bomRowsHub32 struct {
 			ReleasedOn              string `json:"releasedOn"`
 		} `json:"versionBomRiskDataSummary"`
 		MatchTypes []string `json:"matchTypes"`
-		Licenses             []struct {
-				Name           string `json:"name"`
-				LicenseDisplay string `json:"licenseDisplay"`
+		Licenses   []struct {
+			Name           string `json:"name"`
+			LicenseDisplay string `json:"licenseDisplay"`
 		} `json:"licenses"`
-		ProjectName string`json:projectName"`
-		ReleaseVersion string `json:"releaseVersion"`
-		RiskProfile bomRiskProfile `json:"riskProfile"`
+		ProjectName    string         `json:projectName"`
+		ReleaseVersion string         `json:"releaseVersion"`
+		RiskProfile    bomRiskProfile `json:"riskProfile"`
 	} `json:"items"`
-	
 }
 
 func (h *HubServer) login() bool {
@@ -235,6 +236,54 @@ func (h *HubServer) login() bool {
 		fmt.Printf("ERROR : resp status : %s\n%d\n", resp.Status, resp.StatusCode)
 		return false
 	}
+	return true
+}
+
+type statusWriteDir struct {
+	Meta struct {
+		Href string `json:"href"`
+	} `json:"_meta"`
+}
+
+type codeLocationStatus struct {
+	Status string `json: "status"`
+}
+
+func (h *HubServer) WaitForBomCompletion(path string) bool {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Printf("ERROR : %s\n", err)
+		return false
+	}
+
+	var status statusWriteDir
+	if err := json.Unmarshal(file, &status); err != nil {
+		fmt.Printf("ERROR : %s\n", err)
+		return false
+	}
+
+    //wait until the status is complete
+	for {
+		var codelocation codeLocationStatus
+
+        
+		buf := h.getHubRestEndPointJson(status.Meta.Href)
+		if buf.Len() == 0 {
+			fmt.Printf("Error no response for url : %s\n", status.Meta.Href)
+			return false
+		}
+		
+
+		if err := json.Unmarshal([]byte(buf.String()), &codelocation); err != nil {
+			fmt.Printf("ERROR Unmarshall error : %s\n", err)
+			return false
+		}
+		if strings.Compare(codelocation.Status, "COMPLETE") != 0 {
+			break
+		}
+
+	}
+
 	return true
 }
 
@@ -299,7 +348,7 @@ func (h *HubServer) getHubRestEndPointJson(restEndPointUrl string) *bytes.Buffer
 
 func (h *HubServer) getBomRows(versionId string, maxRows int) *bomRowsHub32 {
 	//getStr := fmt.Sprintf("%s/api/v1/releases/%s/component-bom-entries?limit=%d&sortField=producerProject.name&ascending=true&offset=0&aggregationEntityType=RL&inUseOnly=true", h.Config.Url, versionId, maxRows)
-    getStr := fmt.Sprintf("%s/api/v1/releases/%s/component-bom-entries?limit=%d&sortField=projectName&ascending=true&offset=0&aggregationEntityType=RL&inUseOnly=true", h.Config.Url, versionId, maxRows)
+	getStr := fmt.Sprintf("%s/api/v1/releases/%s/component-bom-entries?limit=%d&sortField=projectName&ascending=true&offset=0&aggregationEntityType=RL&inUseOnly=true", h.Config.Url, versionId, maxRows)
 
 	var brHub32 bomRowsHub32
 
@@ -338,7 +387,7 @@ func (h *HubServer) getVulnerabilities(versionId string, releaseId string, chann
 	//getStr := fmt.Sprintf("%s/api/v1/releases/%s/RL/%s/channels/%s/vulnerabilities?limit=%d&sortField=baseScore&offset=0", h.Config.Url, versionId, producerReleaseId, channelReleaseId, maxRows)
 	getStr := fmt.Sprintf("%s/api/v1/releases/%s/RL/%s/channels/%s/vulnerabilities?limit=%d&sortField=baseScore&offset=0", h.Config.Url, versionId, releaseId, channelReleaseId, maxRows)
 
-    fmt.Printf("DEBUG getVulnerabilities : %s\n", getStr)
+	fmt.Printf("DEBUG getVulnerabilities : %s\n", getStr)
 
 	var vulns vulnerabilities
 

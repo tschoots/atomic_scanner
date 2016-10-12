@@ -264,8 +264,11 @@ func downloadFromUrl(url string) {
 					break
 				}
 				if err != nil {
-					fmt.Printf("ERROR reading buffer of %s\n%s\n", name, err)
-					break
+					if strings.Compare(err.Error(), "EOF") != 0 {
+						fmt.Printf("ERROR reading buffer of %s\n%s%d\n", name, err, n)
+					    break
+					}
+					
 				}
 
 				// write a chunk
