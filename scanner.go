@@ -16,7 +16,7 @@ import (
 //func ScanImage(path string,jar string, jarpath string, image string, conf config) {
 func ScanImage(scanDir string, conf *config, statusWriteDir string) {
 	hostname, _ := os.Hostname()
-	tag := time.Now().Format(time.RFC850)
+	tag := fmt.Sprintf("%s_%d",  time.Now().Format(time.RFC850) , time.Now().Nanosecond())
 	project := fmt.Sprintf("{%s}%s", hostname, "atomic_scan" )
 	
 	jar, jarPath := getJarFiles(conf.ScannerDir)
